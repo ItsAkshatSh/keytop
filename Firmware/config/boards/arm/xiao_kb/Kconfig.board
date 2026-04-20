@@ -1,0 +1,3 @@
+config BOARD_XIAO_KB
+    bool "CustXiaoKeeb"
+    depends on SOC_NRF52840

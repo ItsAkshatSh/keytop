@@ -1,0 +1,12 @@
+identifier: xiao_kb
+name: XIAO Keyboard
+type: board
+arch: arm
+toolchain: zephyr
+ram: 256
+flash: 1024
+supported:
+ - ble
+ - i2c
+ - gpio
+ - usb_device
