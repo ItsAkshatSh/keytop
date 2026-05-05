@@ -1,0 +1,14 @@
+config INPUT_TPS65201A
+    bool "TPS65201A PMIC"
+    depends on y
+    depends on DT_HAS_TI_TPS65201A_ENABLED
+    depends on I2C
+    depends on INPUT
+    help
+      This option enables support for the TPS65201A PMIC, which is used on some
+      ZMK-compatible keyboards. It provides power management features and can be
+      used to control the power supply to the keyboard's components.
+
+      Enabling this option will allow ZMK to communicate with the TPS65201A PMIC
+      over I2C, allowing it to manage power efficiently and potentially extend
+      battery life on wireless keyboards.
