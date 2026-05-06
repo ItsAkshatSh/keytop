@@ -290,5 +290,65 @@ Three finger handler
 
 static void handle_three_finger(const struct device *dev, struct tps65201a_data *data, uint8_t gesture)
 {
-    ig
+    if (gesture == GESTURE_NONE ||  !gesture_allowed(data,gesture)){
+        return;
+    }
+
+    switch(gesture){
+        case GESTURE_3F_LEFT:
+            input_report_key(dev, INPUT_KEY_LEFTALT, 1, false, K_NO_WAIT);
+            input_report_key(dev, INPUT_KEY_LEFT, 1, true, K_NO_WAIT);
+            input_report_key(dev, INPUT_KEY_LEFT, 0, false, K_NO_WAIT);
+            input_report_key(dev, INPUT_KEY_LEFTALT, 0, false, K_NO_WAIT);
+            LOG_INF("3F swipe LEFT (ALT + Left)");
+            break;
+            
+        case GESTURE_3F_RIGHT:
+            input_report_key(dev, INPUT_KEY_LEFTALT, 1, false, K_NO_WAIT);
+            input_report_key(dev, INPUT_KEY_RIGHT, 1, true, K_NO_WAIT);
+            input_report_key(dev, INPUT_KEY_RIGHT, 0, false, K_NO_WAIT);
+            input_report_key(dev, INPUT_KEY_LEFTALT, 0, false, K_NO_WAIT);
+            LOG_INF("3F swipe RIGHT (ALT + Right)");
+
+        case GESTURE_3F_UP:
+            input_report_key(dev, INPUT_KEY_LEFTALT, 1, false, K_NO_WAIT);
+            input_report_key(dev, INPUT_KEY_UP, 1, true, K_NO_WAIT);
+            input_report_key(dev, INPUT_KEY_UP, 0, false, K_NO_WAIT);
+            input_report_key(dev, INPUT_KEY_LEFTALT, 0, false, K_NO_WAIT);
+            LOG_INF("3F swipe UP (ALT + Up)");
+
+        case GESTURE_3F_DOWN:
+            input_report_key(dev, INPUT_KEY_LEFTALT, 1, false, K_NO_WAIT);
+            input_report_key(dev, INPUT_KEY_DOWN, 1, true, K_NO_WAIT);
+            input_report_key(dev, INPUT_KEY_DOWN, 0, false, K_NO_WAIT); 
+            input_report_key(dev, INPUT_KEY_LEFTALT, 0, false, K_NO_WAIT);
+            LOG_INF("3F swipe DOWN (ALT + Down)");
+            break;
+        default:
+            LOG_DBG("3F unknown gesture: %d", gesture);
+            break;
+    }
+}
+
+static void tps65201a_process(struct k_work *work){
+    struct tps65201a_data *data = CONTAINER_OF(work, struct tps65201a_data, work);
+    const struct device *dev = data->dev;
+    uint8_t buf[5], status, finger_count, gesture, contact_size;
+    int ret;
+
+    if (MIN_EVENT_INTERVAL_MS > 0){
+        int64_t now = k_uptime_get();
+        int64_t elapsed = now - data->last_event_ms;
+        if ((now - data->last_event_ms) < MIN_EVENT_INTERVAL_MS){
+            tps_write_byte(dev, REG_CONTROL, BIT(1));
+            return;
+        }
+        data->last_event_ms = now;
+    }
+
+    ret = tps_read(dev, REG_STATUS, &status, 1);
+    if (ret < 0) {
+        tps_write_byte(dev, REG_CONTROL, BIT(1));
+        return;
+    }
 }
