@@ -75,6 +75,7 @@ struct tps65201a_data {
     struct k_work  work;
     struct k_work_delayable tap_confirm_work;
     struct k_work_delayable gesture_cooldown_work;
+    
 
     enum touch_state state;
 
@@ -93,6 +94,7 @@ struct tps65201a_data {
     int64_t two_finger_start_ms;
 
     int64_t gesture_last_fired_ms[11];
+
 
     int64_t last_event_ms;
 };
@@ -351,4 +353,45 @@ static void tps65201a_process(struct k_work *work){
         tps_write_byte(dev, REG_CONTROL, BIT(1));
         return;
     }
+
+    if (!(status & BIT(0))) {
+        k_work_cancel_delayable(&data->gesture_cooldown_work);
+
+        if(data->state != STATE_TOUCHING){
+            int64_t now = k_uptime_get() - data->touch_start_ms;
+
+        if (now <= TAP_MAX_MS){
+                uint32_t btn = get_click_button(data->tap_start_x);
+                int64_t since_last = k_uptime_get() - data->last_tap_ms;
+                bool is_double = (data->last_tap_ms > 0 && since_last <= DOUBLE_TAP_MS && data->last_tap_btn == btn);
+
+                if (is_double){
+                    k_work_cancel_delayable(&data->tap_confirm_work);
+                    emit_double_click(dev, btn);
+                    data->last_tap_ms = 0;
+                    data->state = STATE_IDLE;
+                } else {
+                    data->pending_btn = btn;
+                    data->last_tap_ms = k_uptime_get();
+                    data->last_tap_btn = btn;
+                    data->state = STATE_TAP_PENDING;
+                    k_work_schedule(&data->tap_confirm_work, K_MSEC(DOUBLE_TAP_MS));
+                    LOG_DBG("Tap detected, waiting for double tap...", data->tap_start_x);
+                }
+            } else {
+                data->state = STATE_IDLE;
+            }
+        } else if (data->two_finger_start_ms > 0){
+            int64_t dur = k_uptime_get() - data->two_finger_start_ms;
+            if (!data->two_finger_was_scrolling && dur <= TAP_MAX_MS){
+                emit_click(dev, INPUT_BTN_MIDDLE);
+            }
+        }
+
+        reset_touch_state(data);
+        tps_write_byte(dev, REG_CONTROL, BIT(1));
+        return;
+    }
+
+    ret = tps_read(dev, REG_FINGER_COUNT)
 }
