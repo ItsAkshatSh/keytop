@@ -38,6 +38,7 @@ LOG_MODULE_REGISTER(tps65201a, CONFIG_INPUT_LOG_LEVEL);
 
 #define TAP_MAX_MS 150
 #define TAP_MAX_DISTANCE 150
+#define TAP_MAX_MOVEMENT 150
 
 #define DOUBLE_TAP_MS 300
 
@@ -102,6 +103,7 @@ struct tps65201a_data {
 struct tps65201a_config {
     struct i2c_dt_spec i2c;
     struct gpio_dt_spec rdy_gpio;
+    struct gpio_dt_spec reset_gpio;
 };
 
 /*I2C read-write*/
@@ -260,7 +262,7 @@ static void handle_two_finger(const struct device *dev, struct tps65201a_data *d
             break;
 
         case GESTURE_SCROLL_LEFT:
-            input_report_re(dev, INPUT_REL_HWHEEL, -SCROLL_STEP, true, K_NO_WAIT);
+            input_report_rel(dev, INPUT_REL_HWHEEL, -SCROLL_STEP, true, K_NO_WAIT);
             data->two_finger_was_scrolling = true;
             LOG_DBG("2F scroll LEFT");
             break;
@@ -393,5 +395,173 @@ static void tps65201a_process(struct k_work *work){
         return;
     }
 
-    ret = tps_read(dev, REG_FINGER_COUNT)
+    ret = tps_read(dev, REG_FINGER_COUNT, &finger_count, 1);
+    if (ret < 0 || finger_count == 0){
+        tps_write_byte(dev, REG_CONTROL, BIT(1));
+        return;
+    }
+    
+    
+    ret = tps_read(dev, REG_CONTACT_SIZE, &contact_size, 1);
+    if (ret == 0 && contact_size > PALM_SIZE_THRESHOLD){
+        LOG_DBG("Palm detected (contact size %d), ignoring touch", contact_size);
+        tps_write_byte(dev, REG_CONTROL, BIT(1));
+        return;
+    }
+
+    ret = tps_read(dev, REG_GESTURE, &gesture, 1);
+    if (ret < 0){
+        gesture = GESTURE_NONE;
+    }
+
+    k_work_reschedule(&data->gesture_cooldown_work, K_MSEC(GESTURE_COOLDOWN_MS));
+
+    if (finger_count == 2){
+        if(data->two_finger_start_ms == 0){
+            data->two_finger_start_ms = k_uptime_get();
+            data->two_finger_was_scrolling = false;
+            LOG_DBG("TWO-FINGER SESH START");
+        }
+        data->state = STATE_DRAGGING;
+        handle_two_finger(dev, data, gesture);
+        tps_write_byte(dev, REG_CONTROL, BIT(1));
+        return;
+    }
+
+    if (finger_count == 3){
+        data->state = STATE_DRAGGING;
+        handle_three_finger(dev, data, gesture);
+        tps_write_byte(dev, REG_CONTROL, BIT(1));
+        return;
+    }
+
+    /*cursor*/
+
+    ret = tps_read(dev, REG_TOUCH_DATA, buf, 5);
+    if (ret < 0) {
+        tps_write_byte(dev, REG_CONTROL, BIT(1));
+        return;
+    }
+
+    int16_t x = ((buf[1] & 0x0F) << 8) | buf[2];
+    int16_t y = ((buf[3] & 0x0F) << 8) | buf[4];
+
+    if (data->state == STATE_IDLE || data->state == STATE_TAP_PENDING){
+        data->touch_start_ms = k_uptime_get();
+        data->tap_start_x = x;
+        data->tap_start_y = y;
+        data->state = STATE_TOUCHING;
+
+        LOG_DBG("Touch start at (%d, %d)", x, y);
+    } else if (data->state == STATE_TOUCHING || data->state == STATE_DRAGGING){
+        // Handle ongoing touch events
+        if(abs(x - data->tap_start_x) > TAP_MAX_MOVEMENT || abs(y - data->tap_start_y) > TAP_MAX_MOVEMENT){
+            data->state = STATE_DRAGGING;
+        }
+
+        int16_t raw_dx = x - data->last_x;
+        int16_t raw_dy = y - data->last_y;
+
+
+        bool dx_real = abs(raw_dx) > JITTER_THRESHOLD;
+        bool dy_real = abs(raw_dy) > JITTER_THRESHOLD;
+
+        if (dx_real || dy_real){
+            int16_t dx = apply_acceleration(raw_dx);
+            int16_t dy = apply_acceleration(raw_dy);
+
+            if (dx != 0 || dy != 0){
+                input_report_rel(dev, INPUT_REL_X, dx, true, K_NO_WAIT);
+                input_report_rel(dev, INPUT_REL_Y, dy, true, K_NO_WAIT);
+                LOG_DBG("Move: raw_dx=%d raw_dy=%d -> dx=%d dy=%d", raw_dx, raw_dy, dx, dy);
+            } else if ( dx != 0){
+                input_report_rel(dev, INPUT_REL_X, dx, true, K_NO_WAIT);
+                LOG_DBG("Move X: raw_dx=%d -> dx=%d", raw_dx, dx);
+            } else if (dy != 0){
+                input_report_rel(dev, INPUT_REL_Y, dy, true, K_NO_WAIT);
+                LOG_DBG("Move Y: raw_dy=%d -> dy=%d", raw_dy, dy);
+            }
+        }
+    }
+    data->last_x = x;
+    data->last_y = y;
+    tps_write_byte(dev, REG_CONTROL, BIT(1));
+
 }
+
+static void tps65201a_rdy_isr(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins){
+    struct tps65201a_data *data = CONTAINER_OF(cb, struct tps65201a_data , rdy_cb);
+    k_work_submit(&data->work);
+}
+
+/*initialization*/
+
+static int tps65201a_init(const struct device *dev){
+    const struct tps65201a_config *cfg = dev->config;
+    struct tps65201a_data *data = dev->data;
+    int ret;
+    uint8_t id;
+
+    data->dev = dev;
+    data->state = STATE_IDLE;
+
+    memset(data->gesture_last_fired_ms, 0, sizeof(data->gesture_last_fired_ms));
+
+    k_work_init(&data->work, tps65201a_process);
+    k_work_init_delayable(&data->tap_confirm_work, tap_confirm_handler);
+    k_work_init_delayable(&data->gesture_cooldown_work, gesture_timeout_handler);
+
+    if (!i2c_is_ready_dt(&cfg->i2c)){
+        LOG_ERR("I2C bus not ready");
+        return -ENODEV;
+    }
+
+    if (cfg->reset_gpio.port != NULL){
+        if (!gpio_is_ready_dt(&cfg->reset_gpio)){
+            LOG_ERR("Reset GPIO not ready");
+            return -ENODEV;
+        }
+        gpio_pin_configure_dt(&cfg->reset_gpio, GPIO_OUTPUT_INACTIVE);
+        k_sleep(K_MSEC(10));
+
+        gpio_pin_set_dt(&cfg->reset_gpio, 1);
+        k_sleep(K_MSEC(50));
+    }
+
+    ret = tps_read(dev, REG_PRODUCT_ID, &id, 1);
+    if (ret < 0){
+        LOG_ERR("Failed to read product ID");
+        return ret;
+    }
+
+    LOG_INF("TPS65201A detected, Product ID: 0x%02X", id);
+
+    LOG_INF("Zones: LEFT < %d | RIGHT >= %d", RIGHT_ZONE_MIN, RIGHT_ZONE_MIN);
+
+    if (!gpio_is_ready_dt(&cfg->rdy_gpio)){
+        LOG_ERR("RDY GPIO not ready");
+        return -ENODEV;
+    }
+
+    gpio_pin_configure_dt(&cfg->rdy_gpio, GPIO_INPUT);
+    gpio_init_callback(&data->rdy_cb, tps65201a_rdy_isr, BIT(cfg->rdy_gpio.pin));
+    gpio_add_callback(cfg->rdy_gpio.port, &data->rdy_cb);
+    gpio_pin_interrupt_configure_dt(&cfg->rdy_gpio, GPIO_INT_EDGE_TO_ACTIVE);
+
+    LOG_INF("TPS65201A initialization complete");
+    return 0;
+}
+
+/* device tree initialization */
+
+#define TPS65201A_INIT(inst)\
+    static struct tps65201a_data tps65201a_data_##inst;\
+    static const struct tps65201a_config tps65201a_config_##inst = {\
+        .i2c = I2C_DT_SPEC_INST_GET(inst),\
+        .rdy_gpio = GPIO_DT_SPEC_INST_GET(inst, rdy_gpios),\
+        .reset_gpio = GPIO_DT_SPEC_INST_GET_OR(inst, reset_gpios, {0}),\
+    };\
+
+    DEVICE_DT_INST_DEFINE(inst,tps65201a_init, NULL, &tps65201a_data_##inst, &tps65201a_config_##inst, POST_KERNAL, CONFIG_INPUT_INIT_PRIORITY, NULL);
+
+    DT_INST_FOREACH_STATUS_OKAY(TPS65201A_DEFINE)
