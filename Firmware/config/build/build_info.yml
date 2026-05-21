@@ -1,0 +1,5 @@
+west:
+  command: C:\Users\USER\AppData\Roaming\Python\Python313\Scripts\west build -b xiao_kb
+    -d build -p always
+  topdir: C:\Users\USER\Documents\xiaokb\zmk-workspace
+  version: 1.5.0

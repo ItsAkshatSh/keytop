@@ -1,12 +1,27 @@
 if BOARD_XIAO_KB
 
-config BOARD_XIAO_KB
-    default "xiao_kb"
-
 config ZMK_KEYBOARD_NAME
     default "XIAO KB"
 
-config USB_DEVICE_STACK
-    default y if USB_DEVICE_STACK
+config BUILD_OUTPUT_UF2
+    default y
+
+config USE_DT_CODE_PARTITION
+    default y
+
+config SYSTEM_CLOCK_SLOPPY_IDLE
+    default y
+
+config WATCHDOG
+    default y
+
+config WDT_DISABLE_AT_BOOT
+    default n
+
+config WDT_NRFX
+    default y
+
+config HWINFO
+    default y
 
 endif

@@ -1,0 +1,6 @@
+board:
+  name: xiao_kb
+  full_name: XIAO Keyboard
+  vendor: seeed
+  socs:
+    - name: nrf52840
