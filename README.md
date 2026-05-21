@@ -36,14 +36,14 @@ I always wanted a keyboard that could connect to my pc while I was on my bed, so
 
 </div>
 
-want to work on this? head to /path
+want to work on this? head [here](https://github.com/ItsAkshatSh/keytop/tree/main/Hardware)
 
-- Refer to the BOM /path
-- Download the PCB files from /path
+- Refer to the [BOM](https://github.com/ItsAkshatSh/keytop/blob/main/BOM.csv)
+- Download the PCB files from [here](https://github.com/ItsAkshatSh/keytop/tree/main/Hardware)
 - Order using the provided Gerber files
 - Solder all components
 - Download ZMK and other related softwares
-- Build the UF2 boot file(or get it from here /path) and place it under the new drive called ```XIAO-BLE```, using a Data cable
+- Build the UF2 boot file(or get it from [here](https://github.com/ItsAkshatSh/keytop/tree/main/Firmware/Build)) and place it under the new drive called ```XIAO-BLE```, using a Data cable
 - and enjoy your new keyboard!
 
 <div align='center'>
@@ -67,21 +67,54 @@ want to work on this? head to /path
 </div>
 
 The firmware is written using ZMK,
+```
+config/
+  boards/
+    arm/
+      xiao_kb/
+        CMakeLists.txt
+        Kconfig.board
+        Kconfig.defconfig
+        Kconfig.xiao_kb
+        board.cmake
+        board.yml
+        xiao_kb.defconfig
+        xiao_kb.dts
+        xiao_kb.yaml
+        xiao_kb_defconfig
+  drivers/input/
+    CMakeLists.txt
+    Kconfig
+    tps65201a.c
+```
 
-insert path
 
 <div align='center'>
 
 ### BOM
 
-</div>
 
-Check it out here! /path
+
+Check it out [here](https://github.com/ItsAkshatSh/keytop/blob/main/BOM.csv)!
+
+| S no.   | Part                                    | Qty.      | link                                                                                                                                                                                                              | Price(aed)   | Price($)   |
+|:--------|:----------------------------------------|:----------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-------------|:-----------|
+| 1       | Mechanical Switches - low profile       | 60        | [Link](https://mechanicalkeyboards.com/products/kailh-choc-round-red-43g-low-profile-linear?sacode=042505&utm_source=simple-affiliate&utm_medium=social&utm_campaign=Patrick+%287843938566444%29)                         | Dhs. 46.80   | $12.74     |
+| 2       | Keycaps                                 | 54        | [Link](https://chosfox.com/products/chocfox-cfx-up-keycaps-set-pre-sale?variant=45884540256450&country=AE&currency=USD&utm_source=chatgpt.com)                                                                            | Dhs 58.39    | $15.90     |
+| 3       | Trackpad Module - Module - TPS65-201A-S | 1         | [Link](https://jlcpcb.com/partdetail/Azoteq-TPS65_201AS/C6339186)                                                                                                                                                         | -            | $9.56      |
+| 4       | Trackpad Module - Glass overlay         | 1         | [Link](https://keycapsss.com/Azoteq-ProxSense-I2C-Touch-Sensor-Module-Capacitive-Trackpad/KC10195-65-GLASS)                                                                                                               | -            | $8.13      |
+| 5       | Seeed Studio XIAO nRF52840              | 1         | [Link](https://www.seeedstudio.com/Seeed-XIAO-BLE-nRF52840-p-5201.html)                                                                                                                                                   | -            | $9.90      |
+| 6       | MCP23017 - S                            | 1         | [Link](https://www.lcsc.com/product-detail/C647352.html?s_z=n_q_MCP23017%2520E%252FSP&spm=wm.ssy.bg.0.xh&lcsc_vid=QlAMAlZQE1QKUlNfElINUwACQQIKVwECQlhaUVRREVExVlNRQVJbVVZUQldcXzsOAxUeFF5JWBYZEEoKFBINSQcJGk4dAgUUFAk%3D) | -            | $3         |
+| 7       | MakerHawk 1000mAh 3.7V Lipo Battery     | 1         | [Link](https://www.amazon.ae/gp/product/B091XYZ2V3/ref=ewc_pr_img_1?smid=A1WV019O4JSKKB&psc=1)                                                                                                                            | Dhs 58       | $16        |
+| 8       | PCB                                     | 5/2(pcba) |                                                                                                                                                                                                                   |              | $102.74    |
+|         | **Total** |           |                                                                                                                                                                                                                   |              | $177.77    |
+
+</div>
 
 <div align='center'>
 
 ### Zine
 
-insert
+<img src="https://github.com/ItsAkshatSh/keytop/blob/main/Magazine.png?raw=true" width=70% height=70%>
 
 # Thank you Hackclub!
