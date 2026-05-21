@@ -1,8 +1,9 @@
 <h1 align="center">
   <br>
+  <img src="https://raw.githubusercontent.com/ItsAkshatSh/keytop/refs/heads/main/ref/header.png" width=90%>
   <br>
   <br>
-  TheDeck
+  keytop
   <br>
 </h1>
 <div align="center">
@@ -49,15 +50,17 @@ want to work on this? head to /path
 
 ### Schematic
 
-insert image
+<img src="https://raw.githubusercontent.com/ItsAkshatSh/keytop/refs/heads/main/ref/PCBImgs/SCH.png">
 
 ### PCB
 
-insert image x2 (one 3d, one 2d)
+<img src = "https://github.com/ItsAkshatSh/keytop/blob/main/ref/PCBImgs/PCB.png?raw=true" width=700px height=900px>
+
+<img src = "https://github.com/ItsAkshatSh/keytop/blob/main/ref/PCBImgs/3dPCB.png?raw=true" width=700px height=900px>
 
 ### CAD
 
-Insert image
+<img src = "https://github.com/ItsAkshatSh/keytop/blob/main/ref/PCBImgs/CASE1.png?raw=true" width=700px height=900px>
 
 ### Firmware
 
