@@ -62,6 +62,8 @@ want to work on this? head [here](https://github.com/ItsAkshatSh/keytop/tree/mai
 
 <img src = "https://github.com/ItsAkshatSh/keytop/blob/main/ref/PCBImgs/CASE1.png?raw=true" width=700px height=900px>
 
+Check it out on [Onshape](https://cad.onshape.com/documents/347e1b4c32ca0e99b6b4bdf0/w/21b40434a25b8381c4bb2092/e/18c35be39fdcfdaaf1d80c9d?renderMode=0&uiState=6a1940416ba01f1f6cb9e873)
+
 ### Firmware
 
 </div>
